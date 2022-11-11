@@ -1,0 +1,12 @@
+Please follow these instructions to run the script and reanalyze your data:
+
+1. Copy the attached cleanup tool to your linux server.
+2. If you do not already have Cell Ranger ATAC 1.1 installed, download Cell Ranger ATAC 1.1 from https://support.10xgenomics.com/single-cell-atac/software/downloads/latest. The installation instructions are available at https://support.10xgenomics.com/single-cell-atac/software/pipelines/latest/installation. v1.1 is needed to run the reanalyze command in step 7.
+3. Provide the cleanup tool access to the Cell Ranger ATAC python libraries. This can be done by running source path/to/cellranger-atac-1.1.0/sourceme.bash. (Note: replace the path/to part to reflect the path on your machine).
+4. The attached python script has documentation that can be accessed with python clean_barcode_multiplets_1.1.py -h.
+5. Run the cleanup tool to generate a list of valid barcodes. In most cases, the script can be run with one argument that specifies the path to the outs folder of your ATAC analysis.python clean_barcode_multiplets_1.1.py path/to/outs (Note: replace the path/to part to reflect the path on your machine).
+6. This program use ~16GB of memory, runs in ~1 hour and generates 3 files.
+	summary.txt: This is a log file and contains the same information that is printed on screen.
+	cell_barcodes.csv: This file contains a list of valid barcodes, and it can be used in cellranger-atac reanalyze.
+	excluded_barcodes.csv: This file contains the list of excluded barcodes and their categorization (barcode_multiplet, gel_bead_multiplet).
+7. Reanalyze your data with the subset of valid barcodes (cell_barcodes.csv)cellranger-atac reanalyze --barcodes=path/to/cell_barcodes.csvThe reanalyze command will produce a new web summary and Loupe Cell Browser file. See the following docs for more details https://support.10xgenomics.com/single-cell-atac/software/pipelines/latest/using/reanalyze.
