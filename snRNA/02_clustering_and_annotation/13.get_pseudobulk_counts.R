@@ -7,11 +7,13 @@ library(Seurat)
 
 data_obj_sub <- readRDS("./seurat_objects/snRNA_cellBneder_corrected_postQC_scTransformed_clustered_2ndRoundAnnotated_clean_SeuratV4_object.rds")
 
-meta_data <- data_obj_sub@meta.data %>% 
+meta_data <- data_obj_sub@meta.data %>%
   rownames_to_column("cell_id") %>%
-  as_tibble() %>% 
-  mutate(group_level2 = paste(region, disease, rna_anno_2ndRound_level_2, sep = " "),
-         group_level3 = paste(region, disease, rna_anno_2ndRound_level_3, sep = " "))
+  as_tibble() %>%
+  mutate(
+    group_level2 = paste(region, disease, rna_anno_2ndRound_level_2, sep = " "),
+    group_level3 = paste(region, disease, rna_anno_2ndRound_level_3, sep = " ")
+  )
 
 # get the raw counts from the `RNA` slot in the Seurat object
 mat <- data_obj_sub@assays$RNA@counts
@@ -39,23 +41,24 @@ saveRDS(mat_SCT_cell_cpm, "snRNA_geneByCell_dgCMatrix_SCTransformed_CPM.rds")
 # compute TPM by individual cell
 # read in bed file to get gene length (gene body, not transcript length in this case)
 gene_anno <- read_tsv("Homo_sapiens.GRCh38.93.filtered.bed",
-                      col_names = c("chr", "start", "end", "id", "score", "strand"),
-                      col_types = "ciicic") %>% 
-  mutate(id_bak = id) %>% 
-  separate(id_bak, c("gene_id", "gene_name_unique"), sep = "_") %>% 
+  col_names = c("chr", "start", "end", "id", "score", "strand"),
+  col_types = "ciicic"
+) %>%
+  mutate(id_bak = id) %>%
+  separate(id_bak, c("gene_id", "gene_name_unique"), sep = "_") %>%
   mutate(gene_length = end - start)
 # read a lookup table to handle the issue of repeat gene names and the ".x" issue
 gene_id_lookup <- read_tsv("/cndd2/junhao/ALS_FTD_singleCell/integration/latest/data/raw/snrna_raw.gene")
 
 # save the order of gene in the matrix
-mat_cell_gene_order <- tibble(gene_name = rownames(mat)) %>% 
-  rownames_to_column("mat_idx") %>% 
+mat_cell_gene_order <- tibble(gene_name = rownames(mat)) %>%
+  rownames_to_column("mat_idx") %>%
   mutate(mat_idx = as.numeric(mat_idx))
 
-gene_anno_cell_mod <- gene_anno %>% 
-  left_join(gene_id_lookup, by = "id") %>% 
-  left_join(mat_cell_gene_order, by = "gene_name") %>% 
-  filter(!is.na(mat_idx)) %>% 
+gene_anno_cell_mod <- gene_anno %>%
+  left_join(gene_id_lookup, by = "id") %>%
+  left_join(mat_cell_gene_order, by = "gene_name") %>%
+  filter(!is.na(mat_idx)) %>%
   arrange(mat_idx)
 
 mat_cell_tpm <- mat / gene_anno_cell_mod$gene_length * 1000
@@ -70,10 +73,10 @@ saveRDS(mat_cell_tpm, "snRNA_geneByCell_dgCMatrix_SCTransformed_TPM.rds")
 # get pooled library size
 pool_lib_size <- meta_data %>%
   group_by(group_level2) %>%
-  summarise(pooled_lib_size = sum(nCount_SCT)) %>% 
+  summarise(pooled_lib_size = sum(nCount_SCT)) %>%
   ungroup()
 pool_lib_size_lookup <- pool_lib_size$pooled_lib_size
-names(pool_lib_size_lookup) <- pool_lib_size$group_level2 
+names(pool_lib_size_lookup) <- pool_lib_size$group_level2
 
 # get pooled counts (pseudobulk)
 # make model matrix
@@ -96,14 +99,14 @@ mat_cpm@x <- 10^6 * mat_cpm@x / rep.int(colSums(mat_cpm), diff(mat_cpm@p))
 
 # compute TPM
 # save the order of gene in the matrix
-mat_gene_order <- tibble(gene_name = rownames(mat_summary_mm)) %>% 
-  rownames_to_column("mat_idx") %>% 
+mat_gene_order <- tibble(gene_name = rownames(mat_summary_mm)) %>%
+  rownames_to_column("mat_idx") %>%
   mutate(mat_idx = as.numeric(mat_idx))
 
-gene_anno_mod <- gene_anno %>% 
-  left_join(gene_id_lookup, by = "id") %>% 
-  left_join(mat_gene_order, by = "gene_name") %>% 
-  filter(!is.na(mat_idx)) %>% 
+gene_anno_mod <- gene_anno %>%
+  left_join(gene_id_lookup, by = "id") %>%
+  left_join(mat_gene_order, by = "gene_name") %>%
+  filter(!is.na(mat_idx)) %>%
   arrange(mat_idx)
 
 mat_tpm <- mat_summary_mm / gene_anno_mod$gene_length * 1000
